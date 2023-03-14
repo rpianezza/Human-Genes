@@ -1,4 +1,4 @@
-Creating library of exons
+Creating library of human exons and genes
 ================
 
 ## Prepare the environment

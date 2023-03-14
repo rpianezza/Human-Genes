@@ -1,5 +1,5 @@
 ---
-title: "Creating library of exons"
+title: "Creating library of human exons and genes"
 output: rmarkdown::github_document
 editor_options: 
   markdown: 
