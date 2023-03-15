@@ -337,7 +337,7 @@ ggplot(pcg, aes(length))+
   geom_histogram(bins = 150)+
   xlim(0, 5000)+
   geom_vline(xintercept = 150, col = "red")+
-  ggtitle("Exons count by length")+
+  ggtitle("Gene count by length")+
   labs(subtitle = "Only protein coding genes")+
   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
 ```
@@ -373,3 +373,180 @@ lost_bases_pcg <- pcg %>% filter(length<150) %>% summarise(length = sum(length))
 Considering only the **protein coding genes**, the fraction below 150 bp
 is really non significant (0.07% for even less % of bases lost). In
 total, we have 19955 annotated protein coding genes.
+
+## Overlapping sequences
+
+``` r
+overlap <- function(bed, seq_type, cut) {
+
+bed <- bed %>% filter(end-start>cut)
+total_count <- nrow(bed) %>% as_tibble() %>% dplyr::rename("sequences" = value)
+
+overlaps <- bed %>% mutate(prev_end = lag(end, default = 0), next_start = lead(start, default = Inf)) %>% filter(start < prev_end | end > next_start)
+  
+bases <- overlaps %>% mutate(overlap_begin = ifelse(prev_end-start>0, prev_end-start, 0), overlap_end = ifelse(end-next_start>0, end-next_start, 0), overlap = overlap_begin+overlap_end) %>% select(-overlap_begin, -overlap_end, -prev_end, -next_start)
+  
+overlap_count <- nrow(overlaps) %>% as_tibble() %>% dplyr::rename("overlapping_sequences" = value) %>% mutate(cutoff = cut)
+
+tibble <- bind_cols(total_count, overlap_count) %>% mutate(percentage_overlapping = (overlapping_sequences/sequences)*100, type = seq_type) %>% relocate(cutoff, before = NULL) %>% relocate(type, before = NULL)
+
+figure <- ggplot(bases, aes(overlap))+
+  geom_histogram(bin = 500)+
+  xlim(0, 1000)+
+  ggtitle(seq_type)+
+  labs(subtitle = paste0("Removed sequences shorter than ", cut))+
+  xlab("Overlap (bp)")+
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+
+list(table = tibble, plot = figure)
+}
+```
+
+``` r
+# All exons
+exons <- read_tsv("/Volumes/Temp1/human-genes/exons/exons.bed", col_names = c("chr", "start", "end", "name", "type")) %>% select(-type) %>% distinct()
+```
+
+    ## Rows: 1499012 Columns: 5
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## Delimiter: "\t"
+    ## chr (2): chr, name
+    ## dbl (3): start, end, type
+    ## 
+    ## ℹ Use `spec()` to retrieve the full column specification for this data.
+    ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+
+``` r
+ov_ex <- overlap(exons, "all_exons", 0)
+```
+
+    ## Warning in geom_histogram(bin = 500): Ignoring unknown parameters: `bin`
+
+``` r
+ov_ex_c <- overlap(exons, "all_exons", 150)
+```
+
+    ## Warning in geom_histogram(bin = 500): Ignoring unknown parameters: `bin`
+
+``` r
+# PCG exons
+exons_pcg <- read_tsv("/Volumes/Temp1/human-genes/exons/exons-pcg.bed", col_names = c("chr", "start", "end", "name", "type")) %>% select(-type, -X6) %>% distinct()
+```
+
+    ## Rows: 1267336 Columns: 6
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## Delimiter: "\t"
+    ## chr (3): chr, name, type
+    ## dbl (3): start, end, X6
+    ## 
+    ## ℹ Use `spec()` to retrieve the full column specification for this data.
+    ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+
+``` r
+ov_ex_pcg <- overlap(exons_pcg, "pcg_exons", 0)
+```
+
+    ## Warning in geom_histogram(bin = 500): Ignoring unknown parameters: `bin`
+
+``` r
+ov_ex_pcg_c <- overlap(exons_pcg, "pcg_exons", 150)
+```
+
+    ## Warning in geom_histogram(bin = 500): Ignoring unknown parameters: `bin`
+
+``` r
+# All genes
+genes <- read_tsv("/Volumes/Temp1/human-genes/genes/genes.bed", col_names = c("chr", "start", "end", "name", "type")) %>% distinct()
+```
+
+    ## Rows: 60649 Columns: 5
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## Delimiter: "\t"
+    ## chr (3): chr, name, type
+    ## dbl (2): start, end
+    ## 
+    ## ℹ Use `spec()` to retrieve the full column specification for this data.
+    ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+
+``` r
+ov_g <- overlap(genes, "all_genes", 0)
+```
+
+    ## Warning in geom_histogram(bin = 500): Ignoring unknown parameters: `bin`
+
+``` r
+ov_g_c <- overlap(genes, "all_genes", 150)
+```
+
+    ## Warning in geom_histogram(bin = 500): Ignoring unknown parameters: `bin`
+
+``` r
+# PC genes
+genes_pcg <- read_tsv("/Volumes/Temp1/human-genes/genes/protein-coding-genes.bed", col_names = c("chr", "start", "end", "name", "type")) %>% distinct()
+```
+
+    ## Rows: 19955 Columns: 4
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## Delimiter: "\t"
+    ## chr (2): chr, name
+    ## dbl (2): start, end
+    ## 
+    ## ℹ Use `spec()` to retrieve the full column specification for this data.
+    ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+
+``` r
+ov_pcg <- overlap(genes_pcg, "pc_genes", 0)
+```
+
+    ## Warning in geom_histogram(bin = 500): Ignoring unknown parameters: `bin`
+
+``` r
+ov_pcg_c <- overlap(genes_pcg, "pc_genes", 150)
+```
+
+    ## Warning in geom_histogram(bin = 500): Ignoring unknown parameters: `bin`
+
+``` r
+# Final table
+(tab <- bind_rows(ov_ex$table, ov_ex_c$table, ov_ex_pcg$table, ov_ex_pcg_c$table, ov_g$table, ov_g_c$table, ov_pcg$table, ov_pcg_c$table))
+```
+
+    ## # A tibble: 8 × 5
+    ##   type      cutoff sequences overlapping_sequences percentage_overlapping
+    ##   <chr>      <dbl>     <int>                 <int>                  <dbl>
+    ## 1 all_exons      0    653422                443228                   67.8
+    ## 2 all_exons    150    336303                218452                   65.0
+    ## 3 pcg_exons      0    496587                357721                   72.0
+    ## 4 pcg_exons    150    243499                168445                   69.2
+    ## 5 all_genes      0     60649                 28488                   47.0
+    ## 6 all_genes    150     54048                 25643                   47.4
+    ## 7 pc_genes       0     19955                  6442                   32.3
+    ## 8 pc_genes     150     19940                  6420                   32.2
+
+``` r
+# Final plot (only with cutoff at 150)
+(fig <- ggarrange(ov_ex_c$plot, ov_ex_pcg_c$plot, ov_g_c$plot, ov_pcg_c$plot))
+```
+
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+
+    ## Warning: Removed 50415 rows containing non-finite values (`stat_bin()`).
+
+    ## Warning: Removed 2 rows containing missing values (`geom_bar()`).
+
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+
+    ## Warning: Removed 37383 rows containing non-finite values (`stat_bin()`).
+    ## Removed 2 rows containing missing values (`geom_bar()`).
+
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+
+    ## Warning: Removed 22738 rows containing non-finite values (`stat_bin()`).
+    ## Removed 2 rows containing missing values (`geom_bar()`).
+
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+
+    ## Warning: Removed 5035 rows containing non-finite values (`stat_bin()`).
+    ## Removed 2 rows containing missing values (`geom_bar()`).
+
+![](library-prep_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
