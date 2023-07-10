@@ -33,5 +33,5 @@ def pcg_coverage(file_path, scg_cov, output):
             out.write(new_row)
 
 normalizer = scg_coverage(args.scg)
-print("Mean SCG coverage (normalizer): "+str(normalizer))
+print("Mean SCG coverage (normalizer): "+str(round((normalizer),2)))
 pcg_coverage(args.pcg, normalizer, args.out)

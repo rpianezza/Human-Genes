@@ -39,3 +39,8 @@ qseqid sseqid pident qlen length mismatch gapopen qstart qend sstart send evalue
 ```{r}
 (raw_blast_matrix <- read_tsv("/Volumes/Temp1/human-genes/blast-matrix/merged.blast", col_names = c("gene", "similar_to", "percentage_identity", "match_length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "x", "bitscore")) %>% select(-x))
 ```
+
+To obtain the paralogs, we filter for gene with percentage of identity >80%, obtaining this final file, which is used in our pipeline to sum up paralogs coverages:
+```{r}
+(similarity80_matrix <- read_tsv("/Volumes/Temp1/human-genes/blast-matrix/similarity80.blast"))
+```

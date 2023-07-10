@@ -1,6 +1,7 @@
 library(tidyverse)
 library(argparse)
 library(tools)
+theme_set(theme_bw())
 
 # Define the command-line arguments
 parser <- ArgumentParser(description = "GC-bias normalization")
@@ -49,11 +50,11 @@ normalized_pcg <- pcg_cn %>%
   mutate(expected_1_copy = (a + (b * gc) + c * (gc * gc)),
          diff_from_1 = 1 - expected_1_copy,
          gc_copynumber = round((copynumber + (diff_from_1 * copynumber)), 2)) %>%
-  select(-expected_1_copy, -scg_mean, -diff_from_1)
+  select(-expected_1_copy, -scg_mean, -diff_from_1, -gc)
 
 # Write the output files
 basename <- file_path_sans_ext(basename(args$pcg_cn))
 
 write_tsv(normalized_pcg, paste0(args$output, "/", basename, "-gcbias.tsv"))
-ggsave(correlation_plot, file=paste0(args$output, "/", basename, "-gcbias.png"), dpi=300)
+ggsave(correlation_plot, file=paste0(args$output, "/GC-plots/", basename, "-gcbias.png"), dpi=300)
 
