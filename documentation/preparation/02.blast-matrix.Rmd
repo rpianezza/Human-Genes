@@ -1,0 +1,41 @@
+---
+title: "BLAST matrix preparation"
+output: rmarkdown::github_document
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+## Prepare the environment
+
+```{r env}
+library(tidyverse)
+```
+
+From the annotation of exons with merged overlaps **merged-exons-pcg.bed**, we extract the fasta sequences using `bedtools getfasta` with the option `-name` to add the gene name to every fasta header.
+```
+bedtools getfasta -fi /Volumes/Temp1/human-genes/reference/ref-genome/GRCh38.p13.genome.fa -bed /Volumes/Temp1/human-genes/annotation/exons/merged-exons-pcg.bed -name+ > /Volumes/Temp1/human-genes/annotation/exons/merged-exons-pcg.fasta
+```
+
+We use the python script **create-transcripts** to merge the fasta sequences of the non-overlapping exons from the same gene. In this way, we create a library of "artificial transcripts" containing all the non-overlapping exons.
+```
+python /Volumes/Temp1/human-genes/scripts/library-prep/create-transcripts.py /Volumes/Temp1/human-genes/annotation/exons/merged-exons-pcg.fasta /Volumes/Temp1/human-genes/annotation/exons/transcripts.fasta
+```
+
+We use the resulting FASTA file of transcripts to calculate the similarity of each transcript vs all the other transcripts in the library using the script **blast.py**, which call the bash script **blast-matrix.sh** to BLAST each FASTA entry to all the others. Then, it calculates the similarity % based on BLAST hits on all the other transcripts.
+```
+python /Volumes/Temp1/human-genes/blast-matrix/blast.py /Volumes/Temp1/human-genes/annotation/exons/transcripts.fasta /Volumes/Temp1/human-genes/annotation/exons/transcripts.fasta /Volumes/Temp1/human-genes/blast-matrix/blast-transcripts/
+```
+
+The final output is this matrix:
+```{r}
+(similarity_matrix <- read_tsv("/Volumes/Temp1/human-genes/blast-matrix/similarity.blast", col_names = c("gene", "similar_to", "percentage_identity", "equal_bases", "gene_length")))
+```
+
+And this is the raw blast matrix, only keeping bitscore > 1000. From this, the script calculates the final matrix. This raw matrix might be useful in the future, cause it contains lot of relevant infos.
+
+BLAST output format:
+qseqid sseqid pident qlen length mismatch gapopen qstart qend sstart send evalue bitscore
+```{r}
+(raw_blast_matrix <- read_tsv("/Volumes/Temp1/human-genes/blast-matrix/merged.blast", col_names = c("gene", "similar_to", "percentage_identity", "match_length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "x", "bitscore")) %>% select(-x))
+```
